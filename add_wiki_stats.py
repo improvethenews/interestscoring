@@ -15,7 +15,7 @@ def get_stats() -> None:
             try:
                 cursor = con.cursor()
                 cursor.execute(
-                    "SELECT id, text FROM `keywords` WHERE COALESCE(`wiki_views22`, 0) = 0 AND COALESCE(`wiki_edits22`) = 0 ORDER BY `id` ASC LIMIT 100 "
+                    "SELECT id, text FROM `keywords` WHERE COALESCE(`wiki_views22`, 0) = 0 AND COALESCE(`wiki_edits22`) = 0 ORDER BY `uses` DESC LIMIT 10000 "
                 )
                 articles = cursor.fetchall()
                 if not articles:  # Break loop if no more articles to process

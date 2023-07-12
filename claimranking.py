@@ -8,7 +8,7 @@ import math
 WIKIPEDIA_MAX_QUERY_LENGTH = 300
 TOP_K_RESULTS = 5
 START_DATE = "20220101"
-END_DATE = "20230101"
+END_DATE = "20221231"
 
 
 def get_wikipedia_views(title: str) -> int:
@@ -83,36 +83,37 @@ def get_keyword_references(claim: str) -> tuple[int, float]:
 
 
 if __name__ == "__main__":
-    with open('claims_10.txt', 'r', encoding="utf-8") as f:
-        claim_stats = {}
-        while True:
-            text = f.readline()
-            keyworded_claim = f.readline()
-            if not text:
-                break
+    for length in [10, 100, 1000]:
+        with open(f'claims_{length}.txt', 'r', encoding="utf-8") as f:
+            claim_stats = {}
+            while True:
+                text = f.readline()
+                keyworded_claim = f.readline()
+                if not text:
+                    break
 
-            _claim = text.strip()
-            keyworded_claim = keyworded_claim.strip()
-            page_titles = wikipedia.search(_claim[:WIKIPEDIA_MAX_QUERY_LENGTH])
-            views = 0
-            edits = 0
-            (keyword_hits, keyword_hits_e) = get_keyword_references(keyworded_claim)
-            for page_title in page_titles:
-                page_title = quote(page_title)
-                views += get_wikipedia_views(page_title)
-                edits += get_wikipedia_edits(page_title)
+                _claim = text.strip()
+                keyworded_claim = keyworded_claim.strip()
+                page_titles = wikipedia.search(_claim[:WIKIPEDIA_MAX_QUERY_LENGTH])
+                views = 0
+                edits = 0
+                (keyword_hits, keyword_hits_e) = get_keyword_references(keyworded_claim)
+                for page_title in page_titles:
+                    page_title = quote(page_title)
+                    views += get_wikipedia_views(page_title)
+                    edits += get_wikipedia_edits(page_title)
 
-            claim_stats[_claim] = {
-                "wikipedia_views": views,
-                "wikipedia_edits": edits,
-                "page_titles": page_titles,
-                "keyword_hits": keyword_hits,
-                "keyword_hits_e": keyword_hits_e
-            }
+                claim_stats[_claim] = {
+                    "wikipedia_views": views,
+                    "wikipedia_edits": edits,
+                    "page_titles": page_titles,
+                    "keyword_hits": keyword_hits,
+                    "keyword_hits_e": keyword_hits_e
+                }
 
             # sort by wikipedia_views
             sorted_claim_stats = sorted(claim_stats.items(), key=lambda x: x[1]["wikipedia_views"], reverse=True)
-            with open('claim_views_10.txt', 'w', encoding="utf-8") as f1:
+            with open(f'output/claim_views_{length}.txt', 'w', encoding="utf-8") as f1:
                 for claim_stat in sorted_claim_stats:
                     f1.write(claim_stat[0])
                     f1.write("\n")
@@ -124,7 +125,7 @@ if __name__ == "__main__":
 
             # sort by wikipedia_edits
             sorted_claim_stats = sorted(claim_stats.items(), key=lambda x: x[1]["wikipedia_edits"], reverse=True)
-            with open('claim_edits_10.txt', 'w', encoding="utf-8") as f2:
+            with open(f'output/claim_edits_{length}.txt', 'w', encoding="utf-8") as f2:
                 for claim_stat in sorted_claim_stats:
                     f2.write(claim_stat[0])
                     f2.write("\n")
@@ -136,7 +137,7 @@ if __name__ == "__main__":
 
             # sort by keyword_hits
             sorted_claim_stats = sorted(claim_stats.items(), key=lambda x: x[1]["keyword_hits"], reverse=True)
-            with open('claim_keyword_hits_10.txt', 'w', encoding="utf-8") as f3:
+            with open(f'output/claim_keyword_hits_{length}.txt', 'w', encoding="utf-8") as f3:
                 for claim_stat in sorted_claim_stats:
                     f3.write(claim_stat[0])
                     f3.write("\n")
@@ -146,10 +147,11 @@ if __name__ == "__main__":
 
             # sort by keyword_hits_e
             sorted_claim_stats = sorted(claim_stats.items(), key=lambda x: x[1]["keyword_hits_e"], reverse=True)
-            with open('claim_keyword_hits_e_10.txt', 'w', encoding="utf-8") as f4:
+            with open(f'output/claim_keyword_hits_e_{length}.txt', 'w', encoding="utf-8") as f4:
                 for claim_stat in sorted_claim_stats:
                     f4.write(claim_stat[0])
                     f4.write("\n")
                     f4.write("keyword_hits_e: " + str(claim_stat[1]["keyword_hits_e"]))
                     f4.write("\n")
                     f4.write("\n")
+        print(f"Finished {length}")
