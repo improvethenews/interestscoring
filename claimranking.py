@@ -13,7 +13,7 @@ END_DATE = "20221231"
 
 def get_wikipedia_views(title: str) -> int:
     headers = {
-        "User-Agent": "jonathan@improvethenews.org",
+        "User-Agent": "jonathan1@improvethenews.org",
         "Accept": "application/json"
     }
     # https://wikimedia.org/api/rest_v1/#/Pageviews%20data/get_metrics_pageviews_per_article__project___access___agent___article___granularity___start___end_
@@ -35,7 +35,7 @@ def get_wikipedia_views(title: str) -> int:
 
 def get_wikipedia_edits(title: str) -> int:
     headers = {
-        "User-Agent": "jonathan@improvethenews.org",
+        "User-Agent": "jonathan1@improvethenews.org",
         "Accept": "application/json"
     }
     url = f"https://wikimedia.org/api/rest_v1/metrics/edits/per-page/en.wikipedia/{title}/user" \

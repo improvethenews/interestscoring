@@ -8,3 +8,6 @@ chromadb==0.3.26
 requests~=2.31.0
 mysql~=0.0.3
 mysql-connector-python~=8.0.26
+matplotlib~=3.7.2
+numpy~=1.25.0
+plotly~=5.15.0
