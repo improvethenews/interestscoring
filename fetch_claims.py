@@ -1,12 +1,4 @@
-import json
 import mysql.connector
-from datetime import datetime, timedelta
-import glob
-import os
-import base64
-import sys
-import random
-import string
 
 
 def fetch_data():
