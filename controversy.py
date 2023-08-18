@@ -2,6 +2,8 @@
 import mysql.connector
 from typing import List, Tuple
 import math
+import plotly.express as px
+import numpy as np
 
 try:
     con = mysql.connector.connect(user='root', password='DdlrsIjzp52YeOs8',
@@ -60,14 +62,44 @@ def get_controversy_score(num_entailments: int, num_contradictions: int) -> floa
 if __name__ == "__main__":
     clusters = get_clusters()
     controversy_scores = {}
+    num_entailments = []
+    num_contradictions = []
+    cluster_names = []
     for cluster in clusters:
         claims = get_claims(cluster[0])
         inferences = get_inferences([x for (x,) in claims])  # convert to list of ints
         entailments = [x for x in inferences if x[3] == 1]
         contradictions = [x for x in inferences if x[3] == 2]
+        num_entailments.append(len(entailments))
+        num_contradictions.append(len(contradictions))
+        cluster_names.append(cluster[1])
         controversy_scores[cluster[1]] = get_controversy_score(len(entailments), len(contradictions))
 
     # sort by controversy score
     controversy_scores = {k: v for k, v in sorted(controversy_scores.items(), key=lambda item: item[1], reverse=True)}
     for cluster, score in controversy_scores.items():
         print(cluster, score)
+
+    fig = px.scatter(x=num_entailments, y=num_contradictions, hover_name=cluster_names)
+    fig.update_layout(
+        title="Entailments vs. Contradictions Linear",
+        xaxis_title="Number of Entailments",
+        yaxis_title="Number of Contradictions",
+    )
+    # print correlation
+    arr = np.array([num_entailments, num_contradictions])
+    arr = arr[:, ~np.all(arr == 0, axis=0)]
+    print(np.corrcoef(arr[0], arr[1]))
+    fig.show()
+
+    fig = px.scatter(x=num_entailments, y=num_contradictions, hover_name=cluster_names, log_x=True, log_y=True)
+    fig.update_layout(
+        title="Entailments vs. Contradictions Log",
+        xaxis_title="Number of Entailments",
+        yaxis_title="Number of Contradictions",
+    )
+    # print correlation of log, remove 0s
+    arr = np.array([num_entailments, num_contradictions])
+    arr = arr[:, ~np.all(arr == 0, axis=0)]
+    print(np.corrcoef(np.log(arr[0]), np.log(arr[1])))
+    fig.show()
