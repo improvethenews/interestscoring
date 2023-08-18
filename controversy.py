@@ -15,9 +15,10 @@ except mysql.connector.Error as err:
 cursor = con.cursor()
 
 
-def get_clusters() -> List[Tuple[int, str]]:
+def get_clusters(ids: List[int]) -> List[Tuple[int, str]]:
     cursor.execute(
-        "SELECT id, title FROM `claimclusters` LIMIT 100 "
+        "SELECT id, title FROM `claimclusters` WHERE `id` IN (%s)" % ', '.join(['%s'] * len(ids)),
+        ids
     )
     claim_clusters = cursor.fetchall()
     return claim_clusters  # type: ignore
@@ -60,7 +61,7 @@ def get_controversy_score(num_entailments: int, num_contradictions: int) -> floa
 
 
 if __name__ == "__main__":
-    clusters = get_clusters()
+    clusters = get_clusters([x for x in range(1, 100)])
     controversy_scores = {}
     num_entailments = []
     num_contradictions = []
