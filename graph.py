@@ -1,11 +1,15 @@
 """Create an entailment graph based on all the claims for a cluster.
 Then, remove all cycles to create a DAG.
 Then, order the DAG topologically.
+Use NetworkX to create a graph from the DAG.
+Then use Cytoscape to visualize after importing the graph in GraphML format.
 """
 
-import csv
 import controversy
+import csv
 from typing import List, Tuple
+from dash import Dash, html
+import dash_cytoscape as cyto
 
 
 def get_claim_names(claim_ids: List[int]) -> List[Tuple[int, str]]:
@@ -20,7 +24,7 @@ def get_claim_names(claim_ids: List[int]) -> List[Tuple[int, str]]:
     return claims  # type: ignore
 
 
-if __name__ == "__main__":
+def update_input():
     cluster = controversy.get_clusters([1])[0]
     claims = controversy.get_claims(cluster[0])
     claim_names = get_claim_names([x for (x,) in claims])
@@ -37,7 +41,25 @@ if __name__ == "__main__":
     with open("graph_input/nodes.csv", "w", newline="") as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(["index", "id", "claim"])
-        # for index, claim in enumerate(claims):
-        #     csvwriter.writerow([index, claim[0], claim[1]])
         for index, claim in enumerate(claim_names):
             csvwriter.writerow([index + 1, claim[0], claim[1]])
+
+
+if __name__ == "__main__":
+    # update_input()
+    app = Dash(__name__)
+
+    app.layout = html.Div([
+        cyto.Cytoscape(
+            id='cytoscape-two-nodes',
+            layout={'name': 'preset'},
+            style={'width': '100%', 'height': '1000px'},
+            elements=[
+                {'data': {'id': 'one', 'label': 'Node 1'}, 'position': {'x': 75, 'y': 75}},
+                {'data': {'id': 'two', 'label': 'Node 2'}, 'position': {'x': 200, 'y': 200}},
+                {'data': {'source': 'one', 'target': 'two'}}
+            ]
+        )
+    ])
+
+    app.run(debug=True)

@@ -5,17 +5,20 @@ import math
 import plotly.express as px
 import numpy as np
 
-try:
-    con = mysql.connector.connect(user='root', password='DdlrsIjzp52YeOs8',
-                                  host='localhost', database="improvethenews", port="3306")
-except mysql.connector.Error as err:
-    print(err)
-    quit()
 
-cursor = con.cursor()
+def get_mysql_connection():
+    try:
+        con = mysql.connector.connect(user='root', password='DdlrsIjzp52YeOs8',
+                                      host='localhost', database="improvethenews", port="3306")
+        cursor = con.cursor()
+    except mysql.connector.Error as err:
+        print(err)
+        exit(1)
+    return con, cursor
 
 
 def get_clusters(ids: List[int]) -> List[Tuple[int, str]]:
+    con, cursor = get_mysql_connection()
     cursor.execute(
         "SELECT id, title FROM `claimclusters` WHERE `id` IN (%s)" % ', '.join(['%s'] * len(ids)),
         ids
@@ -25,6 +28,7 @@ def get_clusters(ids: List[int]) -> List[Tuple[int, str]]:
 
 
 def get_claims(cluster_id: int) -> List[Tuple[int]]:
+    con, cursor = get_mysql_connection()
     cursor.execute(
         "SELECT claim_id FROM `claimmatches` WHERE `cluster_id` = %s",
         (cluster_id,)
@@ -40,6 +44,7 @@ def get_inferences(claim_ids: List[int]) -> List[Tuple[int, int, int, int]]:
     :return: List of tuples of (id, claim_id1, claim_id2, inference_id)
     inference_id: 0 = neutral, 1 = entailment, 2 = contradiction
     """
+    con, cursor = get_mysql_connection()
     placeholders = ', '.join(['%s'] * len(claim_ids))
     cursor.execute(
         f"SELECT id, claim_id1, claim_id2, inference_id FROM `claiminferences` "
