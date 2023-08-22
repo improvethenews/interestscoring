@@ -10,6 +10,7 @@ import csv
 from typing import List, Tuple
 from dash import Dash, html
 import dash_cytoscape as cyto
+import networkx as nx
 
 
 def get_claim_names(claim_ids: List[int]) -> List[Tuple[int, str]]:
@@ -45,21 +46,28 @@ def update_input():
             csvwriter.writerow([index + 1, claim[0], claim[1]])
 
 
-if __name__ == "__main__":
-    # update_input()
-    app = Dash(__name__)
+def create_graph():
+    DG = nx.DiGraph()
+    DG.add_edge(2, 1)  # adds the nodes in order 2, 1
+    DG.add_edge(1, 3)
+    DG.add_edge(2, 4)
+    DG.add_edge(1, 2)
+    cy_data = nx.cytoscape_data(DG)
+    print(cy_data)
 
+    # open using Cytoscape
+    app = Dash(__name__)
     app.layout = html.Div([
         cyto.Cytoscape(
-            id='cytoscape-two-nodes',
-            layout={'name': 'preset'},
-            style={'width': '100%', 'height': '1000px'},
-            elements=[
-                {'data': {'id': 'one', 'label': 'Node 1'}, 'position': {'x': 75, 'y': 75}},
-                {'data': {'id': 'two', 'label': 'Node 2'}, 'position': {'x': 200, 'y': 200}},
-                {'data': {'source': 'one', 'target': 'two'}}
-            ]
+            id='cytoscape',
+            elements=cy_data['elements'],
+            layout={'name': 'breadthfirst'},
+            style={'width': '100%', 'height': '1000px'}
         )
     ])
+    app.run_server(debug=True)
 
-    app.run(debug=True)
+
+if __name__ == "__main__":
+    # update_input()
+    create_graph()
