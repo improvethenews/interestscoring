@@ -7,8 +7,6 @@ import json
 import controversy
 import csv
 from typing import List, Tuple
-from dash import Dash, html
-import dash_cytoscape as cyto
 import networkx as nx
 
 
@@ -72,48 +70,45 @@ def create_graph():
         graphs.append(graph)
 
     # remove cycles
-    # for graph in graphs:
-    #     try:
-    #         cycle = list(nx.find_cycle(graph, orientation="ignore"))
-    #         print(cycle)
-    #     except nx.NetworkXNoCycle:
-    #         pass
+    for idx, graph in enumerate(graphs):
+        # while there is a cycle
+        graph_copy = nx.Graph(graph)
+        try:
+            while nx.find_cycle(graph_copy, orientation="ignore"):  # type: ignore
+                cycle = list(nx.find_cycle(graph_copy, orientation="ignore"))  # type: ignore
+                # print(cycle)
+                # combine all nodes in cycle into one node
+                new_node = cycle[0][0]
 
-    # topological sort
+                for edge in cycle:
+                    graph_copy.remove_edge(edge[0], edge[1])
+
+                cycle_nodes = set([x[0] for x in cycle] + [x[1] for x in cycle])
+
+                # update cycle adjacent edges
+                for edge in graph_copy.edges:
+                    a, b = edge
+                    if a in cycle_nodes:
+                        graph_copy.add_edge(new_node, b)
+                    if b in cycle_nodes:
+                        graph_copy.add_edge(a, new_node)
+
+                # remove all nodes in cycle
+                for edge in cycle:
+                    if edge[0] != new_node:
+                        graph_copy.remove_node(edge[0])
+
+                # replace graph with new graph
+                graphs[idx] = graph_copy
+        except nx.NetworkXNoCycle:
+            pass
+
+    # print(len(graphs[0].nodes))
 
     cy_data = nx.cytoscape_data(graphs[0])
     # save to file
     with open("graph_input/graph.json", "w") as jsonfile:
         jsonfile.write(json.dumps(cy_data))
-
-
-def visualize():
-    with open("graph_input/graph.json", "r") as jsonfile:
-        cy_data = json.load(jsonfile)
-
-    # import dagre layout
-    cyto.load_extra_layouts()
-
-    app = Dash(__name__)
-    app.layout = html.Div([
-        cyto.Cytoscape(
-            id="cytoscape",
-            elements=cy_data["elements"],
-            layout={"name": "dagre"},
-            style={
-                "width": "100%",
-                "height": "700px",
-                "target-arrow-shape": "triangle",
-                "target-arrow-color": "black",
-                "source-arrow-color": "black",
-                "line-color": "#999",
-                "curve-style": "bezier"
-            },
-            maxZoom=2,
-            minZoom=0.5,
-        )
-    ])
-    app.run_server(debug=True)
 
 
 if __name__ == "__main__":
