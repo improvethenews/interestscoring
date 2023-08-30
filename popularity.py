@@ -1,35 +1,100 @@
 from datetime import datetime, timedelta
+
+import mysql.connector.errors
+
+import controversy
 import requests
 import plotly
-import mysql.connector
+from typing import List
+
+
+def update_figure_wikipedia_links() -> None:
+    con, cursor = controversy.get_mysql_connection()
+
+    # get (id, name) from figures table
+    cursor.execute(
+        "SELECT id, name FROM `figures` ORDER BY `id` ASC "
+    )
+    figures = cursor.fetchall()
+    for figure in figures:
+        wiki_link = figure[1]
+        url = f"https://en.wikipedia.org/w/api.php?action=query&format=json&titles={wiki_link}&redirects"
+        headers = {
+            "User-Agent": "jonathan1@improvethenews.org",
+            "Accept": "application/json"
+        }
+        res = requests.get(url, headers=headers)
+        if res.status_code == 200:
+            correct_link = res.json()["query"]["redirects"][0]["to"] if "redirects" in res.json()["query"] else wiki_link
+            print(correct_link)
+            # add Wikipedia link to wiki_link column in figures table
+            cursor.execute(
+                "UPDATE `figures` SET `wiki_link` = %s WHERE `id` = %s",
+                (correct_link, figure[0])
+            )
+            con.commit()
 
 
 def update_figure_popularity(week_start: str) -> None:
-    week_start = datetime.strptime(week_start, "%d%m%y").strftime("%Y%m%d")
-    week_end = (datetime.strptime(week_start, "%Y%m%d") + timedelta(days=7)).strftime("%Y%m%d")
-    try:
-        con = mysql.connector.connect(user='root', password='DdlrsIjzp52YeOs8',
-                                      host='localhost', database="improvethenews", port="3306")
-    except mysql.connector.Error as err:
-        print(err)
-    else:
-        cursor = con.cursor()
+    """
+    :param week_start: YYMMDD
+    """
+    week_start_n = datetime.strptime(week_start, "%y%m%d").strftime("%Y%m%d")
+    week_end_n = (datetime.strptime(week_start, "%y%m%d") + timedelta(days=7)).strftime("%Y%m%d")
+    con, cursor = controversy.get_mysql_connection()
 
-        # get (id, name) from figures table
-        cursor.execute(
-            "SELECT id, name FROM `figures` ORDER BY `id` ASC "
-        )
-        figures = cursor.fetchall()
-        for figure in figures:
-            print(figure)
-            # get figure views for past week
-            # url = (f"https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/"
-            #        f"{figure[1]}/daily/{week_start}/{week_end}")
-            # cursor.execute(
-            #     "INSERT INTO `figurepopularity` (`id`, `week_start_date`, `view_count`) "
-            #     "VALUES (%s, %s, %s) ",
-            #     (figure[0], week_start, get_wikipedia_views(figure[1]))
-            # )
+    # get (id, name) from figures table
+    cursor.execute(
+        "SELECT id, name, wiki_link FROM `figures` ORDER BY `id` ASC "
+    )
+    figures = cursor.fetchall()
+    for figure in figures:
+        wiki_link = figure[2]
+        url = (f"https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/"
+               f"{wiki_link}/daily/{week_start_n}/{week_end_n}")
+        headers = {
+            "User-Agent": "jonathan1@improvethenews.org",
+            "Accept": "application/json"
+        }
+        res = requests.get(url, headers=headers)
+        if res.status_code == 200:
+            data = res.json()
+            views = sum([item["views"] for item in data["items"]])
+            try:
+                cursor.execute(
+                    "INSERT INTO `figure_popularity` (`id`, `week_start_date`, `view_count`) "
+                    "VALUES (%s, %s, %s) ",
+                    (figure[0], week_start, views)
+                )
+                con.commit()
+            except mysql.connector.errors.IntegrityError:
+                print(f"figure popularity for week starting {week_start} already exists")
+                return
+
+
+def get_figure_popularity(figure_id: int) -> List[int]:
+    con, cursor = controversy.get_mysql_connection()
+    cursor.execute(
+        "SELECT view_count FROM `figure_popularity` WHERE `id` = %s ORDER BY `week_start_date` ASC ",
+        (figure_id,)
+    )
+    view_count = cursor.fetchall()
+    return [int(x[0]) for x in view_count]
+
+
+def get_popularity_changes() -> dict:
+    con, cursor = controversy.get_mysql_connection()
+    cursor.execute(
+        "SELECT id, name FROM `figures` ORDER BY `id` ASC "
+    )
+    figures = cursor.fetchall()
+    changes = {}
+    for figure in figures:
+        popularity = get_figure_popularity(figure[0])
+        if len(popularity) > 1:
+            # get percent change from last week
+            changes[figure[1]] = (popularity[-1] - popularity[-2]) / popularity[-2]
+    return changes
 
 
 def graph_figure_popularity(wiki_link: str) -> None:
@@ -71,13 +136,27 @@ def graph_figure_popularity(wiki_link: str) -> None:
 
 
 if __name__ == "__main__":
-    # get latest full week starting Monday
-    today = datetime.today()
-    week_start = today - timedelta(days=today.weekday())
-    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
-    if (today - week_start).days < 7:
-        week_start -= timedelta(days=7)
-    week_start = week_start.strftime("%d%m%y")  # make DDMMYY
-    update_figure_popularity(week_start)
+    # update wiki_link column in figures table
+    # update_figure_wikipedia_links()
 
+    # get latest full week starting Monday
+    # today = datetime.today()
+    # week_start = today - timedelta(days=today.weekday())
+    # week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    # if (today - week_start).days < 7:
+    #     week_start -= timedelta(days=7)
+    # week_start = week_start.strftime("%y%m%d")  # make YYMMDD
+    # update_figure_popularity(week_start)
+
+    # get popularity history of a public figure
+    # print(get_figure_popularity(1))
+
+    # get popularity changes of all public figures in the past week
+    changes = get_popularity_changes()
+    # sort by change
+    changes = {k: v for k, v in sorted(changes.items(), key=lambda item: item[1], reverse=True)}
+    for figure, change in changes.items():
+        print(figure, change)
+
+    # visualize popularity history of a public figure
     # graph_figure_popularity("Donald_Trump")
