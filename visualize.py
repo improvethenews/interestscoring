@@ -15,7 +15,7 @@ def visualize():
     else:
         cursor = con.cursor()
         cursor.execute(
-            "SELECT text, uses, wiki_views22, wiki_edits22 FROM `keywords` WHERE COALESCE(`wiki_views22`, 0) != 0 OR COALESCE(`wiki_edits22`) != 0 ORDER BY RAND() LIMIT 1000 "
+            "SELECT text, uses, wiki_views22, wiki_edits22 FROM `keywords` WHERE COALESCE(`wiki_views22`, 0) != 0 OR COALESCE(`wiki_edits22`, 0) != 0 ORDER BY RAND() LIMIT 1000 "
         )
         articles = cursor.fetchall()
         cursor.close()
