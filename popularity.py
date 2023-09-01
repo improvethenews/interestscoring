@@ -82,6 +82,20 @@ def get_figure_popularity(figure_id: int) -> List[int]:
     return [int(x[0]) for x in view_count]
 
 
+def get_popularity_rankings() -> dict:
+    con, cursor = controversy.get_mysql_connection()
+    cursor.execute(
+        "SELECT id, name FROM `figures` ORDER BY `id` ASC "
+    )
+    figures = cursor.fetchall()
+    rankings = {}
+    for figure in figures:
+        popularity = get_figure_popularity(figure[0])
+        if len(popularity) > 0:
+            rankings[figure[1]] = popularity[-1]
+    return rankings
+
+
 def get_popularity_changes() -> dict:
     con, cursor = controversy.get_mysql_connection()
     cursor.execute(
@@ -151,12 +165,19 @@ if __name__ == "__main__":
     # get popularity history of a public figure
     # print(get_figure_popularity(1))
 
-    # get popularity changes of all public figures in the past week
-    changes = get_popularity_changes()
-    # sort by change
-    changes = {k: v for k, v in sorted(changes.items(), key=lambda item: item[1], reverse=True)}
-    for figure, change in changes.items():
-        print(figure, change)
+    # rank public figures by change in popularity
+    # changes = get_popularity_changes()
+    # # sort by change
+    # changes = {k: v for k, v in sorted(changes.items(), key=lambda item: item[1], reverse=True)}
+    # for figure, change in changes.items():
+    #     print(figure, change)
+
+    # rank public figures by popularity
+    rankings = get_popularity_rankings()
+    # sort by popularity
+    rankings = {k: v for k, v in sorted(rankings.items(), key=lambda item: item[1], reverse=True)}
+    for figure, popularity in rankings.items():
+        print(figure, popularity)
 
     # visualize popularity history of a public figure
     # graph_figure_popularity("Donald_Trump")
